@@ -10,12 +10,12 @@ Repository used for the T&amp;I conference: Smart chatbot workshop
 pyenv update
 pyenv install --list
 ```
-This gives you a list of python versions that can be installed. Note that the version you want installed, e.g. `3.12.5`.
+This gives you a list of python versions that can be installed. This repository has been tested with `3.12.5` version.
 ```
 pyenv install 3.12.5
 pyenv global 3.12.5
 ```
-3. Create a virtual environment to install the required packages
+3. Create a virtual environment to isolate the dependencies
 ```
 python -m venv .venv
 ````
@@ -31,6 +31,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run
+## Run application
 
 WIP
