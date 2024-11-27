@@ -12,9 +12,8 @@ services:
       - 6379:6379
   postgres:
     build:
-      context: ./local/postgres
+      context: ./postgres
       dockerfile: Dockerfile
-    container_name: postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
