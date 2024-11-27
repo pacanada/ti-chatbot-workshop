@@ -14,4 +14,6 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE INDEX ON public.knowledge_base USING ivfflat (embedding) WITH (lists = 100);
 EOSQL
 
+sleep 10
+
 echo "Script execution completed."
