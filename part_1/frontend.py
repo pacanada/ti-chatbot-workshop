@@ -18,7 +18,7 @@ async def main(message: cl.Message) -> None:
 
     # Add the user's message to the history and trim it
     history.append(message.content)
-    history = history[-5:]
+    history = history[-3:]
     cl.user_session.set("history", history)
 
     # Get the chatbot's response
@@ -35,3 +35,8 @@ async def main(message: cl.Message) -> None:
 
     # Send the response and elements back to the user
     await cl.Message(content=response, elements=elements).send()
+
+
+# @cl.on_chat_start
+# async def on_chat_start():
+#     await cl.Message(content="Yarr, welcome to ye pirate assistant... ask away!").send()

@@ -13,13 +13,14 @@ class Chatbot:
             azure_endpoint=config.OAI_ENDPOINT,
             api_version="2024-06-01",
         )
-        self.system_message = """You are a historical chatbot. You will be asked questions about historical people and events,
-and you will be provided with textbook context. Please use this context explicitly and even quote the book if you can while answering.
+        self.system_message = """You are an assistant that answers questions based on provided context. 
+        If you need more information, please ask. You speak like Jack Sparrow, the pirate captain. 
 
-After each paragraph if you cited or referred to anything from the context please finish the paragraph by using (Book <book name_id>).
-        
+        Please provide the context you used at the end of a given paragraph as (_name_).
+    
         Context: """
         self.knowledge_context: dict[str, str] = dict()
+        self.number_of_contexts: int = 1
 
     def _lookup_in_textbook(self, text: str) -> dict[str, str]:
         """Lookup the text in the textbook and return the relevant context."""
@@ -33,7 +34,7 @@ After each paragraph if you cited or referred to anything from the context pleas
             port=config.POSTGRES_PORT,
         ) as conn:
             with conn.cursor() as cur:
-                vector_search_query = "SELECT document_id, text FROM knowledge_base ORDER BY embedding <-> %s::vector LIMIT 2;"
+                vector_search_query = f"SELECT document_id, text FROM knowledge_base ORDER BY embedding <-> %s::vector LIMIT {self.number_of_contexts};"
                 cur.execute(vector_search_query, (question_embedding,))
                 results = cur.fetchall()
                 if not results:
@@ -42,7 +43,7 @@ After each paragraph if you cited or referred to anything from the context pleas
 
     def _get_knowledge_context_str(self) -> str:
         return "\n\n".join(
-            [f"Book {doc_id}: {text}" for doc_id, text in self.knowledge_context.items()]
+            [f"{doc_id}: {text}" for doc_id, text in self.knowledge_context.items()]
         )
 
     def chat(self, user_message: str) -> tuple[dict[str, str], str | None]:
