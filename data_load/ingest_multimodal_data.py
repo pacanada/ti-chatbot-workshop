@@ -2,6 +2,7 @@ import base64
 import json
 import uuid
 from pathlib import Path
+from PIL import Image
 
 import redis
 from config import Config
@@ -18,7 +19,7 @@ config = Config()
 
 
 def load_serialized_data(
-    data_folder: Path,
+        data_folder: Path,
 ) -> tuple[dict[str, dict], dict[str, dict], dict[str, list]]:
     """
     Load all serialized data from the output folder structure
@@ -52,25 +53,27 @@ def load_serialized_data(
         if images_folder.exists():
             all_images[folder_name] = []
             for img_file in images_folder.iterdir():
-                if img_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-                    # Create a tuple of (image_name, base64_string)
-                    img_base64 = encode_image(img_file)
-                    all_images[folder_name].append((img_file.name, img_base64))
+                if img_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+                    # Create a tuple of (image_name, base64_string, image_format)
+                    img_base64, img_format = encode_image(img_file)
+                    all_images[folder_name].append((img_file.name, img_base64, img_format))
 
     return all_texts, all_tables, all_images
 
 
-def encode_image(image_path: Path) -> str:
-    """Getting the base64 string"""
+def encode_image(image_path: Path) -> tuple[str, str]:
+    """Getting the base64 string and image format"""
     with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
+        img_data = image_file.read()
+        img_format = Image.open(image_path).format.lower()
+        return base64.b64encode(img_data).decode("utf-8"), img_format
 
 
 def generate_text_summaries(
-    texts_dict: dict[str, list[str]],
-    tables_dict: dict[str, list[str]],
-    summarize_texts: bool = False,
-    model: AzureChatOpenAI = None,
+        texts_dict: dict[str, list[str]],
+        tables_dict: dict[str, list[str]],
+        summarize_texts: bool = False,
+        model: AzureChatOpenAI = None,
 ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
     """
     Summarize text elements organized by file
@@ -107,11 +110,11 @@ def generate_text_summaries(
 
 
 def generate_img_summaries(
-    images_dict: dict[str, list[tuple[str, str]]], model: AzureChatOpenAI
+        images_dict: dict[str, list[tuple[str, str, str]]], model: AzureChatOpenAI
 ) -> dict[str, list[tuple[str, str]]]:
     """
     Generate summaries for images organized by file
-    images_dict: Dictionary of (image_name, base64_string) tuples by file name
+    images_dict: Dictionary of (image_name, base64_string, image_format) tuples by file name
     """
     image_summaries = {}
 
@@ -122,7 +125,7 @@ def generate_img_summaries(
 
     for file_name, images in images_dict.items():
         image_summaries[file_name] = []
-        for img_name, img_base64 in images:
+        for img_name, img_base64, img_format in images:
             msg = model.invoke(
                 [
                     HumanMessage(
@@ -130,7 +133,7 @@ def generate_img_summaries(
                             {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"},
+                                "image_url": {"url": f"data:image/{img_format};base64,{img_base64}"},
                             },
                         ]
                     )
@@ -142,13 +145,13 @@ def generate_img_summaries(
 
 
 def create_multi_vector_retriever(
-    vectorstore: PGVector,
-    text_summaries_dict: dict[str, list[str]],
-    texts_dict: dict[str, list[str]],
-    table_summaries_dict: dict[str, list[str]],
-    tables_dict: dict[str, list[str]],
-    image_summaries_dict: dict[str, list[tuple[str, str]]],
-    images_dict: dict[str, list[tuple[str, str]]],
+        vectorstore: PGVector,
+        text_summaries_dict: dict[str, list[str]],
+        texts_dict: dict[str, list[str]],
+        table_summaries_dict: dict[str, list[str]],
+        tables_dict: dict[str, list[str]],
+        image_summaries_dict: dict[str, list[tuple[str, str]]],
+        images_dict: dict[str, list[tuple[str, str]]],
 ) -> MultiVectorRetriever:
     """
     Create retriever that indexes summaries, but returns raw images or texts
@@ -163,6 +166,11 @@ def create_multi_vector_retriever(
 
     store = RedisStore(client=redis_client, namespace="multimodalrag")
 
+    # Clear the vector and doc store
+    store.client.flushdb()
+    vectorstore.delete_collection()
+    vectorstore.create_collection()
+
     # Create the multi-vector retriever
     retriever = MultiVectorRetriever(
         vectorstore=vectorstore,
@@ -172,10 +180,10 @@ def create_multi_vector_retriever(
 
     # Helper function to add documents to the vectorstore and docstore
     def add_documents(
-        retriever: MultiVectorRetriever,
-        doc_summaries: list[str],
-        doc_contents: list[str],
-        file_name: str,
+            retriever: MultiVectorRetriever,
+            doc_summaries: list[str],
+            doc_contents: list[str],
+            file_name: str,
     ) -> None:
         doc_ids = [str(uuid.uuid4()) for _ in doc_contents]
         summary_docs = [
@@ -207,7 +215,7 @@ def create_multi_vector_retriever(
         if image_summaries_dict.get(file_name):
             # Extract summaries and images separately from tuples
             summaries = [summary for _, summary in image_summaries_dict[file_name]]
-            images = [img_data for _, img_data in images_dict[file_name]]
+            images = [img_data for _, img_data, _ in images_dict[file_name]]
             add_documents(retriever, summaries, images, file_name)
 
     return retriever

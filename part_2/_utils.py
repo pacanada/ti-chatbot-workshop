@@ -3,6 +3,25 @@ import io
 import re
 
 from PIL import Image
+from io import BytesIO
+
+
+def get_image_dimensions(b64_string: str) -> tuple[int, int]:
+    """
+    Get the dimensions of a base64-encoded image.
+    """
+    image_data = base64.b64decode(b64_string)
+    image = Image.open(BytesIO(image_data))
+    return image.size
+
+
+def get_image_format(b64_string: str) -> str:
+    """
+    Get the format of a base64-encoded image.
+    """
+    image_data = base64.b64decode(b64_string)
+    image = Image.open(BytesIO(image_data))
+    return image.format.lower()
 
 
 def looks_like_base64(sb: str) -> bool:
@@ -31,7 +50,7 @@ def is_image_data(b64data: str) -> bool:
 
 
 def resize_base64_image(
-    base64_string: str, size: tuple[int, int] = (128, 128)
+        base64_string: str, size: tuple[int, int] = (128, 128)
 ) -> tuple[bytes, str]:
     """
     Resize an image encoded as a Base64 string

@@ -3,7 +3,7 @@ from operator import itemgetter
 import chainlit as cl
 import redis
 from _config import Config
-from _utils import is_image_data, looks_like_base64, resize_base64_image
+from _utils import is_image_data, looks_like_base64, resize_base64_image, get_image_dimensions, get_image_format
 from chainlit.element import Element
 from chainlit.input_widget import InputWidget, Slider
 from langchain.memory import ConversationBufferMemory
@@ -71,7 +71,9 @@ def split_image_text_types(docs: list[Document]) -> dict[str, list]:
     Split base64-encoded images and texts
     """
     b64_images = []
+    unique_images = set()  # Set to track unique images
     texts = []
+    unique_texts = set()  # Set to track unique texts
     for doc in docs:
         # Check if the document is of type Document and extract page_content if so
         if isinstance(doc, Document):
@@ -82,57 +84,65 @@ def split_image_text_types(docs: list[Document]) -> dict[str, list]:
             doc_metadata = {}
 
         if looks_like_base64(doc_content) and is_image_data(doc_content):
-            buf, doc_content = resize_base64_image(doc_content, size=(1300, 600))
-            b64_images.append(doc_content)
-            images = cl.user_session.get("retrieved_images")
-            if images:
-                images.append(buf)
-                cl.user_session.set("retrieved_images", images)
-            else:
-                cl.user_session.set("retrieved_images", [buf])
+            # Check the dimensions of the image
+            width, height = get_image_dimensions(doc_content)
+            buf = None  # Initialize buf to None
+            if width > 512 or height > 512:
+                buf, doc_content = resize_base64_image(doc_content, size=(512, 512))
+
+            # Add the image to the list if it's not a duplicate
+            if doc_content not in unique_images:
+                unique_images.add(doc_content)
+                image_format = get_image_format(doc_content)
+                b64_images.append({"content": doc_content, "format": image_format})
+                images = cl.user_session.get("retrieved_images")
+                if images:
+                    if buf:
+                        images.append(buf)
+                    cl.user_session.set("retrieved_images", images)
+                else:
+                    if buf:
+                        cl.user_session.set("retrieved_images", [buf])
         else:
-            texts.append({"content": doc_content, "metadata": doc_metadata})
-            stored_texts = cl.user_session.get("retrieved_texts")
-            if stored_texts:
-                stored_texts.append({"content": doc_content, "metadata": doc_metadata})
-                cl.user_session.set("retrieved_texts", stored_texts)
-            else:
-                cl.user_session.set(
-                    "retrieved_texts", [{"content": doc_content, "metadata": doc_metadata}]
-                )
+            # Add the text to the list if it's not a duplicate
+            if doc_content not in unique_texts:
+                unique_texts.add(doc_content)
+                texts.append({"content": doc_content, "metadata": doc_metadata})
+                stored_texts = cl.user_session.get("retrieved_texts")
+                if stored_texts:
+                    stored_texts.append({"content": doc_content, "metadata": doc_metadata})
+                    cl.user_session.set("retrieved_texts", stored_texts)
+                else:
+                    cl.user_session.set(
+                        "retrieved_texts", [{"content": doc_content, "metadata": doc_metadata}]
+                    )
     return {"images": b64_images, "texts": texts}
 
 
 def img_prompt_func(data_dict: dict) -> list[HumanMessage]:
-    """
-    Join the context into a single string
-    """
-    formatted_texts = "\n".join([text["content"] for text in data_dict["context"]["texts"]])
-    messages = []
+    content = []
 
-    # Adding the text for analysis
-    text_message = {
+    # Add text content
+    content.append({
         "type": "text",
         "text": (
             "You are an assistant for a company called DFDS.\n"
-            "You will be given a mixed of text, tables, and image(s) usually of charts or graphs.\n"
-            "Use this information to answer the question made by the user. \n"
-            f"Chat History: {data_dict['history']}\n\n"
-            f"User-provided question: {data_dict['question']}\n\n"
-            "Text and / or tables:\n"
-            f"{formatted_texts}"
-        ),
-    }
-    messages.append(text_message)
-    # Adding image(s) to the messages if present
-    if data_dict["context"]["images"]:
-        for image in data_dict["context"]["images"]:
-            image_message = {
-                "type": "image_url",
-                "image_url": f"data:image/jpeg;base64,{image}",
+            f"Chat History: {data_dict['history']}\n"
+            f"User-provided question: {data_dict['question']}\n"
+            f"Text and tables:\n{''.join([text['content'] for text in data_dict['context']['texts']])}"
+        )
+    })
+
+    # Add images
+    for image in data_dict["context"]["images"]:
+        content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/{image['format']};base64,{image['content']}"
             }
-            messages.append(image_message)
-    return [HumanMessage(content=str(messages))]
+        })
+
+    return [HumanMessage(content=content)]
 
 
 def multi_modal_rag_chain(
