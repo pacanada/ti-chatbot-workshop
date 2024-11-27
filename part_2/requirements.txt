@@ -1,0 +1,12 @@
+tiktoken
+psycopg2-binary
+openai
+pydantic
+pydantic-settings
+chainlit==1.3.2
+langchain
+langchain-community
+langchain-openai
+pgvector
+Pillow
+redis==5.0.1

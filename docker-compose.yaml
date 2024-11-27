@@ -1,0 +1,83 @@
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - redis-data:/data
+    ports:
+      - 6379:6379
+  postgres:
+    build:
+      context: ./local/postgres
+      dockerfile: Dockerfile
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      TZ: Europe/Copenhagen
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  part_1:
+    build:
+      dockerfile: ./part_1/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  data_load:
+    build:
+      dockerfile: ./data_load/Dockerfile
+    environment:
+      TI_POSTGRES_USER:
+      TI_POSTGRES_PASSWORD:
+      TI_POSTGRES_DB:
+      TI_POSTGRES_HOST: host.docker.internal
+      TI_TZ:
+      TI_OAI_ENDPOINT:
+      TI_OAI_TOKEN:
+      TI_REDIS_URL: redis://host.docker.internal:6379
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    container_name: data_load
+    volumes:
+      - ./data_load/data:/data
+
+  part_2:
+    build:
+      dockerfile: ./part_2/Dockerfile
+    ports:
+      - "9999:9999"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      data_load:
+        condition: service_completed_successfully
+
+volumes:
+  redis-data:
+    driver: local
