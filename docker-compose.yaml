@@ -34,7 +34,7 @@ services:
     build:
       dockerfile: ./part_1/Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     env_file:
       - .env
     depends_on:
