@@ -14,9 +14,4 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE INDEX ON public.knowledge_base USING ivfflat (embedding) WITH (lists = 100);
 EOSQL
 
-# Wait 5 seconds for the database to start
-sleep 5
-
-psql --username=postgres --dbname=postgres < /opt/dump-postgres.sql
-
 echo "Script execution completed."
