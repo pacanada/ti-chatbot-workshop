@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "common"
+version = "0.1.0"
+description = "Common module holding common functions and utilities."
+authors = ["Jakub Kornecki <jakor@dfds.com>"]
+
+[tool.poetry.dependencies]
+pydantic = "^2.5"
+python = ">=3.11,<3.13"
+pydantic-settings = "^2.0.2"
+
+pytest = "^7.4"
+pre-commit = "^3.6.0"
+ipykernel = "^6.29.4"
+jupyter = "^1.1.1"
+notebook = "^7.2.2"
+ipython = "8.29.0"
+python-dotenv = "1.0.1"
+pillow = "11.0.0"
+
+# chatbot
+openai = { version = "^1.35.0", optional = true }
+tiktoken = "^0.8.0"
+
+# database
+psycopg2 = "^2.9.10"
+
+# frontend
+chainlit = "1.3.2"
+langchain = "0.3.7"
+langchain-community = "0.3.7"
+langchain-openai = "0.2.9"
+pgvector = "^0.3.6"
+redis = "5.0.1"
+
+[tool.poetry.extras]
+chatbot = ["openai"]
+database = ["alembic"]
+frontend = ["chainlit", "langchain"]
+
+
+[build-system]
+requires = ["poetry-core>=1.2.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "itchatbot"
+version = "0.1.0"
+description = "Sample project with deployment."
+authors = ["Jakub Kornecki <jakor@dfds.com>"]
+packages = [
+  { include = "chatbot", from = "src/chatbot" },
+  { include = "frontend", from = "src/frontend" },
+  { include = "common", from = "src/common" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+docker = "^7.1.0"
+common = { path = "src/common", develop = true, extras = [
+  "chatbot",
+  "frontend",
+] }
+
+[build-system]
+requires = ["poetry-core>=1.2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+pretty = true
+show_error_codes = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+
+
+[tool.ruff]
+# See rules: https://beta.ruff.rs/docs/rules
+lint.select = [
+  "ANN001", # flake8-annotations
+  "ANN201", # flake8-annotations
+  "B",      # flake8-bugbear
+  "C90",    # mccabe complexity
+  "E",      # pycodestyle
+  "F",      # pyflakes
+  "I",      # isort
+  "PD",     # pandas-vet
+  "RUF100", # unused noqa directive
+  "S",      # flake8-bandit
+]
+target-version = "py311"
+lint.ignore = [
+  "E501", # Avoid enforcing line-length violations
+  "S101", # Avoid complaining about assert statements
+]
+line-length = 100
+
+[tool.ruff.lint.isort]
+known-first-party = ["chatbot", "database", "frontend", "common"]

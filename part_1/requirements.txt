@@ -1,6 +1,10 @@
-tiktoken==0.8.0
-psycopg2-binary==2.9.10
-openai==1.55.1
-pydantic==2.9.2
-pydantic-settings==2.6.1
-chainlit==1.3.2
+tiktoken
+psycopg2-binary
+openai
+pydantic
+pydantic-settings
+chainlit
+langchain
+langchain-community
+langchain-openai
+pgvector

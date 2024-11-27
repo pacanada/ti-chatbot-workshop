@@ -2,7 +2,7 @@ import logging
 
 import chainlit as cl
 
-from chatbot import Chatbot
+from chatbot.chatbot import Chatbot
 
 chatbot = Chatbot()
 logger = logging.getLogger(__name__)

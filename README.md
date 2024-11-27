@@ -1,97 +1,57 @@
-# ti-chatbot-workshop
-Repository used for the T&amp;I conference: **Smart Chatbot Workshop**
+# Introduction
 
-## Run part 1
+Welcome to LLM Chatbot demo!
 
-0. Be in the office or connect with a VPN to DFDS network
-1. Copy the `.env.example` file to `.env` and fill in the required values from 1Password
-2. Setup: Run `docker-compose up --build part_1`:
-    - Exercise 0: Check UI in localhost:8081 and ask any question related to Poland
-    - Exercise 1: Include your own files in `part_1/txt_data/` to be used for RAG
-    - Exercise 2: Add a welcome message: `part_1/frontend.py`
-    - Exercise 3: Modify assistant system message in: `part_1/chatbot.py`
-    - Exercise 4: Adjust number of retrieved documents in `part_1/chatbot.py`
+# Getting Started
 
-## Run part 2
+## Install Poetry/Virtualenv
 
-Before running make sure that you have configured LF line endings for all the files!!!
+Shell:
+
+```bash
+poetry config virtualenvs.in-project true
+poetry env use python
+. .venv/bin/activate
+poetry install
+````
+
+Powershell:
+
+```bash
+poetry config virtualenvs.in-project true
+poetry env use python
+.\.venv\Scripts\activate.ps1
+poetry install
+```
+
+Run notebooks
+
+```bash
+python -m ipykernel install --user --name=myenv --display-name "Python (.venv)"
+jupyter notebook
+```
+
+## Add stuff to the `.env` file
+
+Add config from the `.env.example` file and from 1Password to the `.env` file
+
+```bash
+touch .env
+```
+
+## Run docker-compose
+
+Before running make sure that you have configured LF line endings for all the files in the `local`
+folder!!!
 
 ```bash
 docker pull downloads.unstructured.io/unstructured-io/unstructured:0.10.19
 ```
 
-To execute the part 2 with default data run:
 ```bash
-docker compose up data_load
-docker compose up part_2
+docker-compose up --build
 ```
 
-## Add the data to the VectorDB for multimodal chatbot
-
-You can add the data by moving your files to the `data_load/data/Raw Documents` folder and running the `data_load` service.
-
-```bash
-docker compose up data_load
-```
-You can edit the `data_load/main.py` script and other scripts in the `data_load` folder to change the code. 
-
-To apply these changes:
-1. Modify the entry command in the Dockerfile to run indefinitely (commented out part).
-2. Copy the updated files to the running container.
-3. Run the scripts inside the container.
-
-
-Replace `container_id` with the ID of the container running the `data_load` service. If you want the service to keep running, ensure the entry command in the Dockerfile is set to run indefinitely.
-Copy a file:
-
-```bash
-docker cp ./data_load/main.py container_id:/app/main.py
-```
-
-Run the script:
-
-```bash
-docker exec -it container_id python3 /app/main.py
-```
-
-The alternative to copying the files is to edit them and run:
-
-```bash
-docker compose down data_load -v
-docker compose up data_load --build
-```
-
-
-To run part 2 after adding new data:
-```bash
-docker-compose up part_2
-```
-
-Check UI in localhost:9999 and ask any question related to London.
-You can start with:
-- Tell me about Trafalgar's square image, what colour is the fountain?
-That way you can check that the model actually got the image as input.
-
-### Part 2 Exercise Tasks
-
-#### Task 1: Chat with the London Brochure data (ask 1-2 questions)
-
-#### Task 2: Modify assistant’s system message
-File: `task_2/frontend.py`
-
-#### Task 3: Add your own data with images (PDFs, Word, PowerPoint, Excel files)
-Folder: `data_load/data/Raw Documents`
-
-#### Task 4 (Optional): Add data splitting or merging logic to the ingestion script
-File: `data_load/ingest_multimodal_data.py`
-
-#### Task 5 (Optional): Add data cleanup logic to the ingestion script
-File: `data_load/ingest_multimodal_data.py`
-
-#### Task 6: Delete all Docker images after being done so it does not take disk space
-
-
-## Remove everything
 To remove everything:
 
 ```bash
@@ -102,4 +62,49 @@ Remove unstructured.io image:
 
 ```bash
 docker rmi downloads.unstructured.io/unstructured-io/unstructured:0.10.19
+```
+
+## Add the data to the VectorDB for multimodal chatbot
+
+You will need to replace the container id with the one that is running the data_load service, if you want to have it running you have to switch the entry command in the Dockerfile
+
+```bash
+docker compose up data_load
+```
+
+You can edit the data_load/main.py script and other scripts in data_load folder to change the code.
+Once you switch to the entry command in the Dockerfile to run indefinitely you can copy the updated files to the container and run the scripts.
+
+copy all files:
+
+```bash
+docker cp ./data_load 15c9450a50783d6e58dcf3f39b0b680c45fdf4686e4bae653b75bf2d59840704:/app
+```
+
+copy one file:
+
+```bash
+docker cp ./data_load/main.py 15c9450a50783d6e58dcf3f39b0b680c45fdf4686e4bae653b75bf2d59840704:/app/main.py
+```
+
+run the script:
+
+```bash
+docker exec -it 15c9450a50783d6e58dcf3f39b0b680c45fdf4686e4bae653b75bf2d59840704 python3 /app/main.py
+```
+
+## Run the chatbot UI locally
+
+First you have to change the `.env` file to point to localhost instead of host.docker.internal
+
+Then run the following command: Shell:
+
+```bash
+chainlit run src/frontend/frontend/multimodal_chatbot.py --port 9999
+```
+
+Powershell:
+
+```bash
+chainlit run .\src\frontend\frontend\multimodal_chatbot.py --port 9999
 ```

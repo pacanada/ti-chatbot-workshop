@@ -1,7 +1,8 @@
 import psycopg2
-from _config import Config, logger
-from _get_text import EmbeddingModel
+import tiktoken
 from openai import AzureOpenAI
+
+from common.config import Config
 
 config = Config()
 
@@ -23,7 +24,7 @@ After each paragraph if you cited or referred to anything from the context pleas
 
     def _lookup_in_textbook(self, text: str) -> dict[str, str]:
         """Lookup the text in the textbook and return the relevant context."""
-        question_embedding = EmbeddingModel().get_embedding(text)[0]
+        question_embedding = EmbeddingModel().get_embedding(text)
 
         with psycopg2.connect(
             dbname=config.POSTGRES_DB,
@@ -33,7 +34,7 @@ After each paragraph if you cited or referred to anything from the context pleas
             port=config.POSTGRES_PORT,
         ) as conn:
             with conn.cursor() as cur:
-                vector_search_query = "SELECT document_id, text FROM knowledge_base ORDER BY embedding <-> %s::vector LIMIT 2;"
+                vector_search_query = "SELECT document_id, text FROM knowledge_base ORDER BY embedding <-> %s::vector LIMIT 3;"
                 cur.execute(vector_search_query, (question_embedding,))
                 results = cur.fetchall()
                 if not results:
@@ -48,12 +49,11 @@ After each paragraph if you cited or referred to anything from the context pleas
     def chat(self, user_message: str) -> tuple[dict[str, str], str | None]:
         try:
             self.knowledge_context.update(self._lookup_in_textbook(user_message))
-        except Exception as e:
-            logger.exception(f"Error while looking up in textbook: {e}")
+        except Exception:
             self.knowledge_context = dict()
 
         response = self.client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -63,3 +63,38 @@ After each paragraph if you cited or referred to anything from the context pleas
             ],
         )
         return self.knowledge_context, response.choices[0].message.content
+
+
+class EmbeddingModel:
+    def __init__(self) -> None:
+        self.client = AzureOpenAI(
+            api_key=config.OAI_API_KEY,
+            azure_endpoint=config.OAI_ENDPOINT,
+            api_version="2023-05-15",
+        )
+        self.tiktoken_model = tiktoken.encoding_for_model("text-embedding-ada-002")
+
+    def split_text_to_chunks(self, text: str, chunk_size_tokens: int = 1000) -> list[str]:
+        """Naive implementation where given text is split by double newlines (paragraphs).
+        Max tokens is 8192
+
+        TODO: Use something pre-built like haystack?"""
+        # Replace all multiple spaces with a single space
+        text = " ".join(text.split(sep="      "))
+
+        chunks = []
+        chunk = ""
+        for line in text.split("\n\n"):
+            if len(self.tiktoken_model.encode(chunk + line)) > chunk_size_tokens:
+                chunks.append(chunk)
+                chunk = line
+            else:
+                chunk += line
+        chunks.append(chunk)
+        return chunks
+
+    def get_embedding(self, text_to_embed: str) -> list[float]:
+        response = self.client.embeddings.create(
+            model="text-embedding-ada-002", input=text_to_embed, dimensions=1536
+        )
+        return response.data[0].embedding
