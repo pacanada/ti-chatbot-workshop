@@ -13,3 +13,6 @@ RUN pip install -r requirements.txt
 
 # Run the extract_data.py script
 CMD ["python3", "main.py"]
+
+## Start a shell to keep the container running
+#CMD ["sh", "-c", "while :; do sleep 2073600; done"]

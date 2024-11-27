@@ -33,11 +33,12 @@ services:
     build:
       dockerfile: ./part_1/Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     env_file:
       - .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   data_load:
     build:
@@ -58,6 +59,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    container_name: data_load
     volumes:
       - ./data_load/data:/data
 
@@ -73,8 +75,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      data_load:
-        condition: service_completed_successfully
 
 volumes:
   redis-data:
