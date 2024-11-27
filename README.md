@@ -68,6 +68,28 @@ docker-compose up part_2
 ```
 
 Check UI in localhost:9999 and ask any question related to London.
+You can start with:
+- Tell me about Trafalgar's square image, what colour is the fountain?
+That way you can check that the model actually got the image as input.
+
+### Part 2 Exercise Tasks
+
+#### Task 1: Chat with the London Brochure data (ask 1-2 questions)
+
+#### Task 2: Modify assistant’s system message
+File: `task_2/frontend.py`
+
+#### Task 3: Add your own data with images (PDFs, Word, PowerPoint, Excel files)
+Folder: `data_load/data/Raw Documents`
+
+#### Task 4 (Optional): Add data splitting or merging logic to the ingestion script
+File: `data_load/ingest_multimodal_data.py`
+
+#### Task 5 (Optional): Add data cleanup logic to the ingestion script
+File: `data_load/ingest_multimodal_data.py`
+
+#### Task 6: Delete all Docker images after being done so it does not take disk space
+
 
 ## Remove everything
 To remove everything:
