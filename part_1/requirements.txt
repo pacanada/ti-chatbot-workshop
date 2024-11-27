@@ -1,0 +1,10 @@
+tiktoken
+psycopg2-binary
+openai
+pydantic
+pydantic-settings
+chainlit
+langchain
+langchain-community
+langchain-openai
+pgvector

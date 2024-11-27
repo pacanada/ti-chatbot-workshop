@@ -1,0 +1,13 @@
+numpy==1.24.1
+unstructured[all-docs]==0.10.19
+psycopg2-binary
+pytesseract
+Pillow
+pdf2image
+python-docx
+python-pptx
+langchain
+langchain-community
+langchain-openai
+pgvector
+redis==5.0.1
